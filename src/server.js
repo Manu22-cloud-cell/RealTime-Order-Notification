@@ -10,6 +10,8 @@ const server = http.createServer(app);
 
 const startServer = async () => {
   try {
+    console.log("Connecting to database...");
+    
     await sequelize.authenticate();
 
     console.log("Database connected successfully");
