@@ -8,9 +8,15 @@ const {
   startBinlogListener,
 } = require("./services/binlog.service");
 
+const {
+  initializeSocket,
+} = require("./sockets/socket.service");
+
 const PORT = process.env.PORT || 3000;
 
 const server = http.createServer(app);
+
+initializeSocket(server);
 
 const startServer = async () => {
   try {

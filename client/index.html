@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <title>
+    Real-Time Order Updates
+  </title>
+</head>
+
+<body>
+
+  <h1>Real-Time Order Updates</h1>
+
+  <div id="status">
+    Connecting...
+  </div>
+
+  <hr />
+
+  <div id="events"></div>
+
+  <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+
+  <script>
+    const socket = io("http://localhost:3000");
+
+    const statusElement =
+      document.getElementById("status");
+
+    const eventsElement =
+      document.getElementById("events");
+
+    socket.on("connect", () => {
+      statusElement.textContent =
+        "Connected to server";
+
+      console.log(
+        "Connected:",
+        socket.id
+      );
+    });
+
+    socket.on("disconnect", () => {
+      statusElement.textContent =
+        "Disconnected from server";
+    });
+
+    socket.on("order.created", (data) => {
+      displayEvent(
+        "Order Created",
+        data
+      );
+    });
+
+    socket.on("order.updated", (data) => {
+      displayEvent(
+        "Order Updated",
+        data
+      );
+    });
+
+    socket.on("order.deleted", (data) => {
+      displayEvent(
+        "Order Deleted",
+        data
+      );
+    });
+
+    function displayEvent(
+      eventType,
+      data
+    ) {
+      const eventElement =
+        document.createElement("pre");
+
+      eventElement.textContent =
+        eventType +
+        "\n\n" +
+        JSON.stringify(
+          data,
+          null,
+          2
+        );
+
+      eventsElement.prepend(
+        eventElement
+      );
+    }
+  </script>
+
+</body>
+</html>
