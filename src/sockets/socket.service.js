@@ -1,7 +1,9 @@
 const { Server } = require("socket.io");
+
 const eventBus = require("../event-bus");
 
-let io;
+let io = null;
+let databaseChangeListener = null;
 
 const initializeSocket = (server) => {
   io = new Server(server, {
@@ -23,19 +25,21 @@ const initializeSocket = (server) => {
     });
   });
 
+  databaseChangeListener = (event) => {
+    console.log(
+      "Broadcasting event to clients:",
+      event.type
+    );
+
+    io.emit(
+      event.type,
+      event.data
+    );
+  };
+
   eventBus.on(
     "database.change",
-    (event) => {
-      console.log(
-        "Broadcasting event to clients:",
-        event.type
-      );
-
-      io.emit(
-        event.type,
-        event.data
-      );
-    }
+    databaseChangeListener
   );
 
   console.log(
@@ -43,6 +47,38 @@ const initializeSocket = (server) => {
   );
 };
 
+const closeSocket = async () => {
+  if (!io) {
+    console.log(
+      "Socket.IO is not initialized"
+    );
+
+    return;
+  }
+
+  console.log(
+    "Closing Socket.IO..."
+  );
+
+  if (databaseChangeListener) {
+    eventBus.removeListener(
+      "database.change",
+      databaseChangeListener
+    );
+
+    databaseChangeListener = null;
+  }
+
+  await io.close();
+
+  io = null;
+
+  console.log(
+    "Socket.IO closed successfully"
+  );
+};
+
 module.exports = {
   initializeSocket,
+  closeSocket,
 };

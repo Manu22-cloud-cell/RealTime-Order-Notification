@@ -1,73 +1,141 @@
 const eventBus = require("../event-bus");
 
 const {
-    normalizeCDCEvent,
+  normalizeCDCEvent,
 } = require("./cdc-event.service");
 
+let zongji = null;
+let isListenerRunning = false;
+
 const startBinlogListener = async () => {
-    console.log("Starting CDC listener...");
+  if (isListenerRunning) {
+    console.log("CDC listener is already running");
+    return;
+  }
 
-    try {
-        const { default: ZongJi } = await import("@vlasky/zongji");
+  console.log("Starting CDC listener...");
 
-        const zongji = new ZongJi({
-            host: process.env.CDC_DB_HOST,
-            port: Number(process.env.CDC_DB_PORT),
-            user: process.env.CDC_DB_USER,
-            password: process.env.CDC_DB_PASSWORD,
-        });
+  try {
+    const { default: ZongJi } = await import("@vlasky/zongji");
 
-        zongji.on("error", (error) => {
-            console.error("CDC listener error:", error);
-        });
+    zongji = new ZongJi({
+      host: process.env.CDC_DB_HOST,
+      port: Number(process.env.CDC_DB_PORT),
+      user: process.env.CDC_DB_USER,
+      password: process.env.CDC_DB_PASSWORD,
+    });
 
-        zongji.on("binlog", (event) => {
-            const normalizedEvent = normalizeCDCEvent(event);
+    zongji.on("error", (error) => {
+      console.error(
+        "CDC listener error:",
+        error
+      );
+    });
 
-            // Ignore unsupported events such as TableMap
-            if (!normalizedEvent) {
-                return;
-            }
+    zongji.on("binlog", (event) => {
+      try {
+        const normalizedEvent =
+          normalizeCDCEvent(event);
 
-            console.log("Database change detected");
-            console.log("Event Type:", normalizedEvent.type);
-            console.log("Data:", normalizedEvent.data);
-
-            // Publish the normalized event
-            eventBus.emit(
-                "database.change",
-                normalizedEvent
-            );
-        });
-
-        zongji.start({
-            startAtEnd: true,
-
-            includeEvents: [
-                "tablemap",
-                "writerows",
-                "updaterows",
-                "deleterows",
-            ],
-
-            includeSchema: {
-                realtime_orders: [
-                    "orders",
-                ],
-            },
-        });
+        // Ignore unsupported events such as TableMap
+        if (!normalizedEvent) {
+          return;
+        }
 
         console.log(
-            "CDC listener started. Waiting for database changes..."
+          "Database change detected"
         );
-    } catch (error) {
+
+        console.log(
+          "Event Type:",
+          normalizedEvent.type
+        );
+
+        console.log(
+          "Data:",
+          normalizedEvent.data
+        );
+
+        // Publish normalized event
+        eventBus.emit(
+          "database.change",
+          normalizedEvent
+        );
+      } catch (error) {
         console.error(
-            "Failed to start CDC listener:",
-            error
+          "Error processing CDC event:",
+          error
         );
-    }
+      }
+    });
+
+    zongji.start({
+      startAtEnd: true,
+
+      includeEvents: [
+        "tablemap",
+        "writerows",
+        "updaterows",
+        "deleterows",
+      ],
+
+      includeSchema: {
+        realtime_orders: [
+          "orders",
+        ],
+      },
+    });
+
+    isListenerRunning = true;
+
+    console.log(
+      "CDC listener started. Waiting for database changes..."
+    );
+
+    return zongji;
+  } catch (error) {
+    console.error(
+      "Failed to start CDC listener:",
+      error
+    );
+
+    throw error;
+  }
+};
+
+const stopBinlogListener = () => {
+  if (!zongji || !isListenerRunning) {
+    console.log(
+      "CDC listener is not running"
+    );
+
+    return;
+  }
+
+  console.log(
+    "Stopping CDC listener..."
+  );
+
+  try {
+    zongji.stop();
+
+    zongji.removeAllListeners();
+
+    zongji = null;
+    isListenerRunning = false;
+
+    console.log(
+      "CDC listener stopped successfully"
+    );
+  } catch (error) {
+    console.error(
+      "Error stopping CDC listener:",
+      error
+    );
+  }
 };
 
 module.exports = {
-    startBinlogListener,
+  startBinlogListener,
+  stopBinlogListener,
 };
