@@ -1,93 +1,256 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
 
-  <title>
-    Real-Time Order Updates
-  </title>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Real-Time Order Updates</title>
 </head>
 
 <body>
 
-  <h1>Real-Time Order Updates</h1>
+    <h1>Real-Time Order Updates</h1>
 
-  <div id="status">
-    Connecting...
-  </div>
+    <div id="status">
+        Connecting...
+    </div>
 
-  <hr />
+    <hr />
 
-  <div id="events"></div>
+    <div id="events"></div>
 
-  <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <!-- Socket.IO client library -->
 
-  <script>
-    const socket = io("http://localhost:3000");
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
 
-    const statusElement =
-      document.getElementById("status");
+    <script>
 
-    const eventsElement =
-      document.getElementById("events");
+        /*
+         * Create Socket.IO connection.
+         * Socket.IO automatically attempts to reconnect
+         * when the connection is lost.
+         */
 
-    socket.on("connect", () => {
-      statusElement.textContent =
-        "Connected to server";
-
-      console.log(
-        "Connected:",
-        socket.id
-      );
-    });
-
-    socket.on("disconnect", () => {
-      statusElement.textContent =
-        "Disconnected from server";
-    });
-
-    socket.on("order.created", (data) => {
-      displayEvent(
-        "Order Created",
-        data
-      );
-    });
-
-    socket.on("order.updated", (data) => {
-      displayEvent(
-        "Order Updated",
-        data
-      );
-    });
-
-    socket.on("order.deleted", (data) => {
-      displayEvent(
-        "Order Deleted",
-        data
-      );
-    });
-
-    function displayEvent(
-      eventType,
-      data
-    ) {
-      const eventElement =
-        document.createElement("pre");
-
-      eventElement.textContent =
-        eventType +
-        "\n\n" +
-        JSON.stringify(
-          data,
-          null,
-          2
+        const socket = io(
+            "http://localhost:3000",
+            {
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000
+            }
         );
 
-      eventsElement.prepend(
-        eventElement
-      );
-    }
-  </script>
+
+        /*
+         * Get DOM elements
+         */
+
+        const statusElement =
+            document.getElementById("status");
+
+        const eventsElement =
+            document.getElementById("events");
+
+
+        /*
+         * Successfully connected to server
+         */
+
+        socket.on("connect", () => {
+
+            statusElement.textContent =
+                "Connected to server";
+
+            console.log(
+                "Connected to server:",
+                socket.id
+            );
+
+        });
+
+
+        /*
+         * Connection error
+         */
+
+        socket.on(
+            "connect_error",
+            (error) => {
+
+                statusElement.textContent =
+                    "Connection error. Retrying...";
+
+                console.error(
+                    "Socket connection error:",
+                    error.message
+                );
+
+            }
+        );
+
+
+        /*
+         * Reconnection attempt
+         */
+
+        socket.io.on(
+            "reconnect_attempt",
+            (attempt) => {
+
+                statusElement.textContent =
+                    `Reconnecting... Attempt ${attempt}`;
+
+                console.log(
+                    `Reconnection attempt: ${attempt}`
+                );
+
+            }
+        );
+
+
+        /*
+         * Successfully reconnected
+         */
+
+        socket.io.on(
+            "reconnect",
+            (attempt) => {
+
+                statusElement.textContent =
+                    "Connected to server";
+
+                console.log(
+                    `Reconnected after ${attempt} attempt(s)`
+                );
+
+            }
+        );
+
+
+        /*
+         * Reconnection failed
+         */
+
+        socket.io.on(
+            "reconnect_failed",
+            () => {
+
+                statusElement.textContent =
+                    "Unable to connect to server";
+
+                console.error(
+                    "Reconnection failed."
+                );
+
+            }
+        );
+
+
+        /*
+         * Disconnected from server
+         */
+
+        socket.on(
+            "disconnect",
+            (reason) => {
+
+                statusElement.textContent =
+                    "Disconnected from server";
+
+                console.warn(
+                    "Disconnected from server:",
+                    reason
+                );
+
+            }
+        );
+
+
+        /*
+         * Order Created Event
+         */
+
+        socket.on(
+            "order.created",
+            (data) => {
+
+                displayEvent(
+                    "Order Created",
+                    data
+                );
+
+            }
+        );
+
+
+        /*
+         * Order Updated Event
+         */
+
+        socket.on(
+            "order.updated",
+            (data) => {
+
+                displayEvent(
+                    "Order Updated",
+                    data
+                );
+
+            }
+        );
+
+
+        /*
+         * Order Deleted Event
+         */
+
+        socket.on(
+            "order.deleted",
+            (data) => {
+
+                displayEvent(
+                    "Order Deleted",
+                    data
+                );
+
+            }
+        );
+
+
+        /*
+         * Display real-time database change
+         * in the browser.
+         */
+
+        function displayEvent(
+            eventType,
+            data
+        ) {
+
+            const eventElement =
+                document.createElement("pre");
+
+            eventElement.textContent =
+                eventType +
+                "\n\n" +
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                );
+
+            eventsElement.prepend(
+                eventElement
+            );
+
+        }
+
+    </script>
 
 </body>
+
 </html>
