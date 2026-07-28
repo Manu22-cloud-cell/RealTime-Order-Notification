@@ -33,6 +33,7 @@ const Order = sequelize.define(
     updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
+      defaultValue: DataTypes.NOW,
     },
   },
   {

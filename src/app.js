@@ -1,4 +1,5 @@
 const express = require("express");
+const orderRoutes = require("./routes/order.routes");
 
 const app = express();
 
@@ -10,5 +11,7 @@ app.get("/health", (req, res) => {
     message: "Server is running",
   });
 });
+
+app.use("/api/orders", orderRoutes);
 
 module.exports = app;
